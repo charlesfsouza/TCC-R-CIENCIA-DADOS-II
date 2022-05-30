@@ -1,0 +1,426 @@
+---
+title: "R para ciência de dados II: Trabalho conclusão curso"
+author: "Charles Ferreira de Souza"
+output: html_document
+---
+
+#### As questões a seguir respondem ao que nos foi proposto no trabalho de conclusão do curso `R para ciência de dados II`, ministrado pela [`Curso-R`](https://curso-r.com/)
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+library(dplyr)
+library(ggplot2)
+library(stringr)
+```
+
+```{r echo = FALSE, api = 300}
+
+imdb <- basesCursoR::pegar_base("imdb_completa")
+imdb_pessoas <- basesCursoR::pegar_base("imdb_pessoas")
+imdb_avaliacoes <- basesCursoR::pegar_base("imdb_avaliacoes")
+```
+
+```{r echo = FALSE, api = 300, warning=FALSE}
+imdb <-
+  imdb %>%
+    rename(ano_lancamento = ano) %>%
+    mutate(
+      data_lancamento_original = data_lancamento,
+      data_lancamento = lubridate::ymd(data_lancamento),
+      mes_lancamento = lubridate::month(data_lancamento,label = TRUE),
+      dia_lancamento = lubridate::day(data_lancamento),
+      dia_semana = lubridate::wday(data_lancamento,label = TRUE)
+      ) %>%
+    dplyr::relocate(mes_lancamento, .after = ano_lancamento) %>%
+    dplyr::relocate(dia_lancamento, .after = mes_lancamento)
+
+
+destaque_mes <- 
+imdb %>% 
+  tidyr::drop_na(mes_lancamento) %>%
+  group_by(mes_lancamento) %>%
+  summarise(n = n()) %>%
+  arrange(desc(n)) %>%
+  head(1) 
+
+destaque_dia <- 
+imdb %>% 
+  tidyr::drop_na(dia_lancamento) %>%
+  group_by(dia_lancamento) %>%
+  summarise(n = n()) %>%
+  arrange(desc(n)) %>%
+  head(1) 
+
+```
+#### 1. Qual o mês do ano com o maior número de filmes? E o dia do ano?
+
+##### Na base de dados IMDB o mês do ano com maior número de filmes é `r destaque_mes$mes_lancamento[1]` com `r destaque_mes$n[1] %>% format(big.mark = ".")` lançados, enquanto o dia com maior número de filmes é `r destaque_dia$dia_lancamento[1]` com `r destaque_dia$n[1] %>% format(big.mark = ".")`
+
+```{r echo = FALSE, api = 300, warning=FALSE}
+
+imdb_resumo_ano <- 
+  imdb %>% 
+   mutate(
+      cor = case_when(
+                      mes_lancamento %>% as.numeric() %in% destaque_mes[1,] ~ "goldenrod1",
+                      TRUE ~ "gray70"
+    )) %>%
+  tidyr::drop_na(mes_lancamento) %>%
+  group_by(mes_lancamento,cor) %>%
+  summarise(n = n(),.groups = "keep")
+
+imdb_resumo_dia <- 
+  imdb %>% 
+    mutate(
+      cor = case_when(
+                      dia_lancamento %>% as.numeric() %in% destaque_dia ~ "goldenrod1",
+                      TRUE ~ "gray70"
+    )) %>%
+  tidyr::drop_na(dia_lancamento) %>%
+  group_by(dia_lancamento,cor) %>%
+  summarise(n = n(),.groups = "keep") 
+
+```
+
+
+```{r echo = FALSE, api = 300, warning=FALSE}
+
+imdb_resumo_ano %>%
+  ggplot(aes(x = mes_lancamento, y = n, fill = cor )) +
+  geom_col(show.legend = FALSE) +
+  geom_text( 
+      x = destaque_mes$mes_lancamento, 
+      y = destaque_mes$n, 
+      label = destaque_mes$n %>% format(big.mark = "."),
+      #alpha = 0,
+      hjust = .5, 
+      vjust = 1.5,
+      colour = "grey25",
+      size = 4, 
+      fontface = "bold"
+  ) +
+  labs(
+    x = "Mês do ano de lançamento",
+    y = "Quantidade de filmes",
+    title = "NÚMERO DE FILMES POR MÊS DO ANO DE LANÇAMENTO"
+ ) +
+  scale_fill_identity(guide = "none") +
+  theme_void() +
+  theme(
+    text = element_text(size = 14),
+    axis.text.x = element_text(size = 14, hjust = 0.5),
+    plot.margin = margin(rep(15, 4))
+  )
+
+
+imdb_resumo_dia %>%
+  ggplot(aes(x = dia_lancamento, y = n, fill = cor )) +
+  geom_col(show.legend = FALSE)+
+  geom_text( 
+      x = destaque_dia$dia_lancamento, 
+      y = destaque_dia$n, 
+      label = destaque_dia$n %>% format(big.mark = "."),
+      #alpha = 0,
+      hjust = .5, 
+      vjust = 1.5,
+      colour = "grey25",
+      size = 4, 
+      fontface = "bold"
+  ) +
+  labs(
+    x = "Dia do ano de lançamento",
+    y = "Quantidade de filmes",
+    title = "NÚMERO DE FILMES POR DIA DO ANO DE LANÇAMENTO"
+ ) +
+  scale_x_continuous(breaks = seq(1,31))+
+#  scale_x_continuous((breaks = dia_lancamento)+
+  scale_fill_identity(guide = "none") +
+  theme_void() +
+  theme(
+    text = element_text(size = 14),
+    axis.text.x = element_text(size = 10, hjust = 0.5),
+    plot.margin = margin(rep(15, 4)),
+    axis.title.x = element_text(size = 10)
+  )
+  
+
+```
+
+```{r echo = FALSE, api = 300, warning=FALSE}
+imdb_resumo_pais <- 
+imdb %>%
+  tidyr::separate_rows(pais, sep=",") %>%
+  mutate(genero = str_trim(pais)) %>%
+  group_by(pais) %>%
+  summarise(n = n()) %>%
+  arrange(desc(n)) %>%
+  slice(1:5) %>% 
+  mutate(pais = forcats::fct_rev(forcats::fct_inorder(pais)))
+```
+
+#### 2. Qual o top 5 países com mais filmes na base?
+
+##### Os paises com mais filmes na base são: `r knitr::combine_words(imdb_resumo_pais$pais, sep = ",", and = " e ", oxford_comma = FALSE)`. É importante mencionar que existem produções filmadas em mais de um país.
+
+```{r echo = FALSE, api = 300, warning=FALSE}
+
+imdb_resumo_pais %>%
+  ggplot(aes(x = n, y = pais)) +
+  geom_col(fill = "gray70")+
+  geom_text(
+    aes(label = n  %>% format(big.mark = "."), hjust = 1.1), 
+    size = 4, fontface = "bold"
+  ) +
+  scale_fill_identity(guide = "none") +
+  theme_void() +
+  theme(
+    axis.text.y = element_text(size = 14, hjust = 1),
+    plot.margin = margin(rep(15, 4))
+  ) +
+  labs(
+    title = "TOP 5 paises com mais filmes",
+    subtitle = ""
+    ) 
+
+
+```
+
+
+
+```{r echo = FALSE, api = 300, warning=FALSE}
+
+imdb <- 
+imdb %>%
+    mutate(
+      moeda_orcamento = str_split(orcamento, pattern = "[[:space:]]", simplify = TRUE)[,1],
+      moeda_receita = str_split(receita, pattern = "[[:space:]]", simplify = TRUE)[,1]
+      )
+
+
+moedas_orcamento <- 
+  imdb %>%
+    select(moeda_orcamento) %>%  
+    tidyr::drop_na(moeda_orcamento) %>%
+    unique() 
+
+moedas_receita <- 
+  imdb %>%
+    select(moeda_receita) %>%  
+    tidyr::drop_na(moeda_receita) %>%
+    unique()
+      
+
+```
+
+#### 3. Liste todas as moedas que aparecem nas colunas `orcamento` e `receita` da base `imdb_completa`.
+
+##### As moedas que aparecem em "orcamento" são: `r knitr::combine_words(moedas_orcamento$moeda_orcamento, sep = ",", and = " e ", oxford_comma = FALSE)`. 
+
+##### Em "receita" as moedas que aparecem são `r knitr::combine_words(moedas_receita$moeda_receita, sep = ",", and = " e ", oxford_comma = FALSE)`
+
+
+
+
+```{r echo = FALSE, api = 300, warning=FALSE}
+
+
+imdb <- 
+  imdb %>%
+  mutate(
+      receita = stringr::str_extract(receita, "[0-9]+") %>% as.numeric(),
+      orcamento = stringr::str_extract(orcamento, "[0-9]+") %>% as.numeric(),
+      lucro = receita - orcamento
+  )
+
+
+imdb_longo <- imdb %>%
+          tidyr::separate_rows(genero, sep=",") %>%
+          mutate(genero = str_trim(genero))
+
+
+imdb_resumo_lucro <- 
+imdb_longo %>%
+  filter(moeda_orcamento == "$" | moeda_receita == "$") %>%
+  group_by(genero) %>%
+  summarise(lucro = sum(lucro,na.rm = TRUE)) %>%
+  arrange(desc(lucro))
+
+imdb_resumo_nota <-
+imdb_longo %>%
+  filter(moeda_orcamento == "$" | moeda_receita == "$") %>%
+  group_by(genero) %>%
+  summarise(nota_imdb_medio = mean(nota_imdb,na.rm = TRUE)) %>%
+  arrange(desc(nota_imdb_medio))
+
+
+```
+ 
+#### 4. Considerando apenas orçamentos e receitas em dólar ($), qual o gênero com maior lucro? E com maior nota média?
+
+##### O gênero com maior lucro é `r imdb_resumo_lucro$genero[1]` e o com maior nota média é `r imdb_resumo_nota$genero[1]`. Nas tabelas abaixo são apresentados os cinco principais resultados para lucro e IMDB médio.
+
+`r imdb_resumo_lucro %>% slice(1:5) %>% knitr::kable(col.names = c("Gênero", "Lucro"), digits = 1, caption = "Tabela 1: Top 5 gêneros por lucro", format.args = list(big.mark = ".",decimal.mark = ",", scientific = FALSE))`
+
+`r imdb_resumo_nota %>% slice(1:5) %>% knitr::kable(col.names = c("Gênero", "Nota média IMDB"), digits = 1, caption = "Tabela 2: Top 5 gêneros por nota média IMDB", format.args = list(big.mark = ".",decimal.mark = ",", scientific = FALSE))`
+
+
+
+
+```{r echo = FALSE, api = 300, warning=FALSE}
+
+id_filme_favorito <- "tt0405159" #"Million Dollar Baby", 2004
+
+
+filme_favorito <- 
+  imdb %>%
+  filter(id_filme == id_filme_favorito) %>%
+  select(
+    id_filme,titulo_original,ano_lancamento,direcao,data_lancamento,dia_semana
+    ) %>%
+  mutate(
+    minha_idade_no_lancamento = (data_lancamento - lubridate::ymd("1986-01-06")) / 365.25,
+    minha_idade_no_lancamento = minha_idade_no_lancamento %>% as.numeric() %>% trunc()
+   ) 
+
+filme_favorito <- 
+  filme_favorito %>%
+  mutate(
+    num_filmes_lancados_mesmo_dia = 
+        imdb %>% 
+          filter(
+            data_lancamento == filme_favorito$data_lancamento &
+            id_filme != filme_favorito$id_filme
+            ) %>% 
+          nrow()
+  ) 
+
+
+imdb_resumo <- 
+imdb %>%
+  filter(direcao == filme_favorito$direcao) %>%
+  tidyr::separate_rows(direcao, sep=",") %>%
+  mutate(
+    genero = str_trim(direcao),
+    lucro_valores_dolar = ifelse(moeda_receita == "$",lucro, NA)
+    ) %>%
+  group_by(direcao) %>%
+  summarise(
+    diretor_num_filmes = n(),
+    diretor_lucro_medio_filmes = mean(lucro, na.rm = TRUE)
+  ) 
+
+
+imdb_ranking_nota_media <-
+ imdb_avaliacoes %>% 
+   mutate(ranking_media_imdb = dplyr::dense_rank(desc(nota_media))) %>%
+   arrange(ranking_media_imdb)
+
+
+imdb_ranking_lucro_dolar <-
+ imdb %>% 
+   filter(moeda_receita == "$") %>%
+   tidyr::drop_na(lucro) %>%
+   mutate(ranking_lucro_dolar = dplyr::dense_rank(desc(lucro))) %>%
+   arrange(ranking_lucro_dolar)
+
+ 
+filme_favorito_resumo <-
+  filme_favorito %>%
+    left_join(imdb_resumo, by = c("direcao" = "direcao")) %>%
+    left_join(
+      imdb_ranking_nota_media %>% 
+        select(id_filme, ranking_media_imdb), 
+          by = c("id_filme" = "id_filme")) %>%
+    left_join(
+      imdb_ranking_lucro_dolar %>% 
+        select(id_filme, ranking_lucro_dolar), 
+          by = c("id_filme" = "id_filme")) %>%
+    left_join(
+      imdb_pessoas %>% select(nome, data_nascimento,data_falecimento,local_nascimento), 
+      by = c("direcao" = "nome")) %>%
+    rename(
+      diretor_data_nascimento = data_nascimento,
+      diretor_data_falecimento = data_falecimento,
+      diretor_local_nascimento = local_nascimento
+    ) %>%
+    mutate(
+      diretor_data_nascimento = lubridate::ymd(diretor_data_nascimento),
+      diretor_data_falecimento = lubridate::ydm(diretor_data_falecimento),
+      diretor_idade_anos = ifelse(
+        is.na(diretor_data_falecimento),
+        (lubridate::today() - diretor_data_nascimento) / 365.25,
+        (diretor_data_falecimento - diretor_data_nascimento) / 365.25
+        ),
+      diretor_idade_anos_completos = trunc(diretor_idade_anos)
+    ) 
+
+```
+
+#### 5. Dentre os filmes na base `imdb_completa`, escolha o seu favorito. Então faça os itens a seguir:
+
+##### Meu filme favorito é `r filme_favorito$titulo_original` de `r filme_favorito$ano_lancamento`.
+
+#### a) Quem dirigiu o filme? Faça uma ficha dessa pessoa: idade (hoje em dia ou data de falecimento), onde nasceu, quantos filmes já dirigiu, qual o lucro médio dos filmes que dirigiu (considerando apenas valores em dólar) e outras informações que achar interessante (base `imdb_pessoas`).
+
+##### A direção do filme é de `r filme_favorito$direcao`. Um resumo com as principais informações sobre este diretor estão na tabela abaixo:
+
+`r filme_favorito_resumo %>% select(direcao,diretor_idade_anos_completos,diretor_local_nascimento,diretor_num_filmes,diretor_lucro_medio_filmes) %>% knitr::kable(align = "lllll",col.names = c("Diretor", "Idade","Local nascimento","Número de filmes","Lucro médio dos filmes"), digits = 1, format.args = list(big.mark = ".",decimal.mark = ",", scientific = FALSE))`
+
+#### b) Qual a posição desse filme no ranking  de notas do IMDB? E no ranking de lucro (considerando apenas valores em dólar)?
+
+##### A posição do filme do ranking de notas do IMDB é `r filme_favorito_resumo$ranking_media_imdb` e no ranking de lucro é `r filme_favorito_resumo$ranking_lucro_dolar`
+
+#### c) Em que dia esse filme foi lançado? E dia da semana? Algum outro filme foi lançado no mesmo dia? Quantos anos você tinha nesse dia?
+
+##### O filme foi lançado no dia `r filme_favorito_resumo$data_lancamento[1] %>% format("%d/%m/%Y")`, uma `r filme_favorito_resumo$dia_semana`(Nesta data eu estava com `r filme_favorito_resumo$minha_idade_no_lancamento` anos de idade). Neste mesmo dia foram lançados outros `r filme_favorito_resumo$num_filmes_lancados_mesmo_dia` filmes.
+
+#### d) Faça um gráfico representando a distribuição da nota atribuída a esse filme por idade (base `imdb_avaliacoes`).
+
+```{r echo = FALSE, api = 300, warning=FALSE}
+
+imdb_avaliacoes %>%
+  filter(id_filme == id_filme_favorito) %>%
+  select(
+    id_filme,
+    starts_with("nota_media_idade")
+  )  %>% 
+  tidyr::pivot_longer(
+    cols = starts_with("nota_media_idade"),
+    names_to = "faixa_etaria",
+    values_to = "nota_media"
+  ) %>%
+  mutate(
+    nota_media = as.numeric(nota_media),
+    faixa_etaria = stringr::str_replace(faixa_etaria,"nota_media_idade_","")
+    #faixa_etaria = forcats::fct_rev(forcats::fct_inorder(faixa_etaria))
+    ) %>%
+  ggplot(aes(x = nota_media, y = faixa_etaria)) +
+  geom_col(fill = "gray70")+
+  geom_text(
+    aes(label = sprintf("%0.1f",nota_media), hjust = 1.5), 
+    size = 4, fontface = "bold" 
+  ) +
+  scale_fill_identity(guide = "none") +
+  theme_void() +
+  theme(
+    axis.text.y = element_text(size = 12, hjust = 1.5),
+    plot.margin = margin(rep(15, 10)),
+    axis.title.x = element_text(size = 10),
+    axis.title.y = element_text(angle = 90, size = 10)
+    ) +
+  labs(
+    title = stringr::str_to_upper(filme_favorito$titulo_original),
+    subtitle = "DISTRIBUIÇÃO NOTA MÉDIA IMDB POR FAIXA ETÁXIA",
+  ) + 
+  xlab("Nota média IMDB") +
+  ylab ("Faixa etária")
+
+
+
+```
+
+
+
+
+
+
+
