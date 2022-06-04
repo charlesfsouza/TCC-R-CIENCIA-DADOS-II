@@ -2,9 +2,13 @@
 title: "R para ciência de dados II: Trabalho conclusão curso"
 author: "Charles Ferreira de Souza"
 output: html_document
----
+---   
 
-#### As questões a seguir respondem ao que nos foi proposto no trabalho de conclusão do curso `R para ciência de dados II`, ministrado pela [`Curso-R`](https://curso-r.com/)
+   
+   
+#### As questões a seguir respondem ao que nos foi proposto no trabalho de conclusão do curso `R para ciência de dados II`, ministrado pela [`Curso-R`](https://curso-r.com/)   
+
+
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}
 library(dplyr)
@@ -51,6 +55,7 @@ imdb %>%
   head(1) 
 
 ```
+
 #### 1. Qual o mês do ano com o maior número de filmes? E o dia do ano?
 
 ##### Na base de dados IMDB o mês do ano com maior número de filmes é `r destaque_mes$mes_lancamento[1]` com `r destaque_mes$n[1] %>% format(big.mark = ".")` lançados, enquanto o dia com maior número de filmes é `r destaque_dia$dia_lancamento[1]` com `r destaque_dia$n[1] %>% format(big.mark = ".")`
@@ -156,7 +161,8 @@ imdb %>%
   slice(1:5) %>% 
   mutate(pais = forcats::fct_rev(forcats::fct_inorder(pais)))
 ```
-
+   
+   
 #### 2. Qual o top 5 países com mais filmes na base?
 
 ##### Os paises com mais filmes na base são: `r knitr::combine_words(imdb_resumo_pais$pais, sep = ",", and = " e ", oxford_comma = FALSE)`. É importante mencionar que existem produções filmadas em mais de um país.
@@ -210,7 +216,8 @@ moedas_receita <-
       
 
 ```
-
+   
+   
 #### 3. Liste todas as moedas que aparecem nas colunas `orcamento` e `receita` da base `imdb_completa`.
 
 ##### As moedas que aparecem em "orcamento" são: `r knitr::combine_words(moedas_orcamento$moeda_orcamento, sep = ",", and = " e ", oxford_comma = FALSE)`. 
@@ -253,7 +260,8 @@ imdb_longo %>%
 
 
 ```
- 
+   
+   
 #### 4. Considerando apenas orçamentos e receitas em dólar ($), qual o gênero com maior lucro? E com maior nota média?
 
 ##### O gênero com maior lucro é `r imdb_resumo_lucro$genero[1]` e o com maior nota média é `r imdb_resumo_nota$genero[1]`. Nas tabelas abaixo são apresentados os cinco principais resultados para lucro e IMDB médio.
@@ -354,25 +362,34 @@ filme_favorito_resumo <-
     ) 
 
 ```
-
+   
+   
 #### 5. Dentre os filmes na base `imdb_completa`, escolha o seu favorito. Então faça os itens a seguir:
 
 ##### Meu filme favorito é `r filme_favorito$titulo_original` de `r filme_favorito$ano_lancamento`.
 
+   
+   
 #### a) Quem dirigiu o filme? Faça uma ficha dessa pessoa: idade (hoje em dia ou data de falecimento), onde nasceu, quantos filmes já dirigiu, qual o lucro médio dos filmes que dirigiu (considerando apenas valores em dólar) e outras informações que achar interessante (base `imdb_pessoas`).
 
 ##### A direção do filme é de `r filme_favorito$direcao`. Um resumo com as principais informações sobre este diretor estão na tabela abaixo:
 
 `r filme_favorito_resumo %>% select(direcao,diretor_idade_anos_completos,diretor_local_nascimento,diretor_num_filmes,diretor_lucro_medio_filmes) %>% knitr::kable(align = "lllll",col.names = c("Diretor", "Idade","Local nascimento","Número de filmes","Lucro médio dos filmes"), digits = 1, format.args = list(big.mark = ".",decimal.mark = ",", scientific = FALSE))`
 
+   
+   
 #### b) Qual a posição desse filme no ranking  de notas do IMDB? E no ranking de lucro (considerando apenas valores em dólar)?
 
 ##### A posição do filme do ranking de notas do IMDB é `r filme_favorito_resumo$ranking_media_imdb` e no ranking de lucro é `r filme_favorito_resumo$ranking_lucro_dolar`
 
+   
+   
 #### c) Em que dia esse filme foi lançado? E dia da semana? Algum outro filme foi lançado no mesmo dia? Quantos anos você tinha nesse dia?
 
 ##### O filme foi lançado no dia `r filme_favorito_resumo$data_lancamento[1] %>% format("%d/%m/%Y")`, uma `r filme_favorito_resumo$dia_semana`(Nesta data eu estava com `r filme_favorito_resumo$minha_idade_no_lancamento` anos de idade). Neste mesmo dia foram lançados outros `r filme_favorito_resumo$num_filmes_lancados_mesmo_dia` filmes.
 
+   
+   
 #### d) Faça um gráfico representando a distribuição da nota atribuída a esse filme por idade (base `imdb_avaliacoes`).
 
 ```{r echo = FALSE, api = 300, warning=FALSE}
